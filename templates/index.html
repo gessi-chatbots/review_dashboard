@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Review Feature Extraction</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+    <div>
+        <a href="{{ url_for('logout') }}" class="btn btn-danger" style="float: right;">Logout</a> <!-- Logout button -->
+        <h4>Review</h4>
+        <hr style="margin-top: 24px">
+        <div class="alert alert-info">
+            {{ review }}
+        </div>
+    </div>
+    <div>
+        <h4>Features</h4>
+        <hr>
+        {% if error_message %}
+        <div class="alert alert-danger">{{ error_message }}</div>
+        {% endif %}
+        
+        <form method="POST" action="/">
+            <h5>Extracted features</h5>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Confirm</th>
+                        <th>Reject</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for feature in features %}
+                    <tr>
+                        <td class="feature-column">{{ feature }}</td>
+                        <td>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="feature-{{ loop.index }}" id="confirm{{ loop.index }}" value="confirm">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="feature-{{ loop.index }}" id="reject{{ loop.index }}" value="reject">
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <h5>Missing features</h5>
+            <p>Please input each feature in a different line.</p>
+            <textarea class="form-control custom-textarea" name="new-features" placeholder="Enter missing features"></textarea>
+            {% if count > 0 %}
+            <button type="submit" class="btn btn-secondary" name="previous">Previous</button>
+            {% endif %}
+            <button type="submit" class="btn btn-primary" name="next">Next</button>
+        </form>
+    </div>
+</body>
+</html>

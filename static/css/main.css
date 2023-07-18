@@ -1,0 +1,80 @@
+body {
+  padding: 20px;
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.feature{
+  padding-right: 100px;
+}
+
+.btn {
+  padding: 8px 16px;
+  margin-bottom: 5px;
+  margin-right: 20px;
+  opacity: 0.5;
+}
+
+.btn-primary {
+  opacity: 1.0 !important;
+}
+
+.error {
+  background-color: #FEE;
+  border: 1px solid #EDD;
+  color: #A66;
+  padding: 10px;
+}
+
+.table {
+    font-size: 16px;
+    border: none;
+    width: auto;
+}
+.table th, .table td {
+    padding: 10px;
+    border-top: none;
+    vertical-align: middle;
+    border-bottom: 1px solid #dfdfdf;
+}
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dfdfdf;
+    font-weight: 600;
+}
+.table tbody tr:nth-of-type(even) {
+    background-color: #a8a9aa;
+}
+.table .form-check-input {
+    margin-top: 14px;
+    margin: 0 auto; /* Center the radio buttons */
+}
+.table .btn {
+    padding: 8px 14px;
+    font-size: 16px;
+}
+.alert {
+    margin-top: 10px;
+}
+.review {
+  background-color: #e5ffd6;
+  border-color: green;  
+  border-radius: 5px;
+  padding: 10px;
+  text-align: left;
+  margin-bottom: 25px;
+}
+.table td:first-child {
+  padding-right: 100px; /* Adjust the padding value as needed */
+}
+.custom-textarea {
+  margin: 20px 0px;
+}
