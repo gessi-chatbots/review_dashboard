@@ -1,0 +1,16 @@
+[
+    {
+        "id": "quim",
+        "password": "LIKfivivBS",
+        "start": 0,
+        "end": 10,
+        "current": 1
+    },
+    {
+        "id": "tom",
+        "password": "LIKfivivBS",
+        "start": 10,
+        "end": 20,
+        "current": 2
+    }
+]

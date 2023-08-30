@@ -11,6 +11,8 @@
         <h4>Review</h4>
         <hr style="margin-top: 24px">
         <div class="alert alert-info">
+            <strong>{{ app }}</strong>
+            (<a href="https://play.google.com/store/apps/details?id={{ package }}">{{ package }}</a>)<br/>
             {{ review }}
         </div>
     </div>
@@ -22,7 +24,7 @@
         {% endif %}
         
         <form method="POST" action="/">
-            <h5>Extracted features</h5>
+            <!--h5>Extracted features</h5-->
             <table class="table">
                 <thead>
                     <tr>
@@ -52,10 +54,16 @@
             <h5>Missing features</h5>
             <p>Please input each feature in a different line.</p>
             <textarea class="form-control custom-textarea" name="new-features" placeholder="Enter missing features"></textarea>
-            {% if count > 0 %}
+            <!--{% if count > 0 %}
             <button type="submit" class="btn btn-secondary" name="previous">Previous</button>
-            {% endif %}
+            {% endif %}-->
+
             <button type="submit" class="btn btn-primary" name="next">Next</button>
+
+            <!-- Progress Bar -->
+            <br/><div class="progress mt-5">
+                <div class="progress-bar" role="progressbar" style="width: {{ ((count + 1) / total) * 100 }}%;" aria-valuenow="{{ count + 1 }}" aria-valuemin="0" aria-valuemax="{{ total }}">{{ count + 1 }} / {{ total }}</div>
+            </div>
         </form>
     </div>
 </body>

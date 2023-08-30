@@ -1,13 +1,16 @@
 from flask import Flask, render_template, request, redirect, url_for, session
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
-import os, json
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+import os, json, csv
+import datetime
 
 #Spacy
 from spacy import displacy
 
 app = Flask(__name__)
 with open('config.json') as config_file:
-    app.secret_key = json.load(config_file)['secret_key']
+    json_file = json.load(config_file)
+    app.secret_key = json_file['secret_key']
+    reviews_file_path = json_file['reviews_file_path']
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -16,9 +19,12 @@ login_manager.login_view = 'login'  # Specify the login view for redirection
 
 # User model
 class User(UserMixin):
-    def __init__(self, user_id, password):
+    def __init__(self, user_id, password, start, end, current):
         self.id = user_id
         self.password = password
+        self.start = start
+        self.end = end
+        self.current = current
 
     @classmethod
     def get(cls, user_id):
@@ -26,37 +32,32 @@ class User(UserMixin):
         with open('users.json') as users_file:
             users = json.load(users_file)
 
-            if user_id in users:
-                return User(user_id, users[user_id])
+            for user in users:
+                if user_id == user['id']:
+                    return User(user['id'], user['password'], user['start'], user['end'], user['current'])
         
         return None
 
     def verify_password(self, password):
         # Replace this with your own password verification logic
         return password == self.password
+    
+    def inc_current(self):
+        self.current += 1
+        with open('users.json') as users_file:
+            users = json.load(users_file)
+
+        for user in users:
+            if user['id'] == self.id:
+                user['current'] = self.current
+
+        with open('users.json', 'w') as json_file:
+            json.dump(users, json_file, indent=4)
 
 # User login function
 @login_manager.user_loader
 def load_user(user_id):
     return User.get(user_id)
-
-# Sample data for the table rows
-reviews = ["Best running tracker out there",
-           "It has a flexible session timer",
-           "Call rings but nothing happens",
-           "Best habit tracker out there!",
-           "I also have some checklists for various tasks"
-           ]
-
-features = [["running","tracker"],
-            ["timer"],
-            ["call"],
-            ["habit tracker"],
-            ["checklists"]
-            ]
-
-count = 0
-clicked_buttons = [None]*len(features[0])
 
 @app.route('/', methods=['GET', 'POST'])
 @login_required
@@ -65,36 +66,55 @@ def index():
         form_responses = request.form.to_dict()
 
         next_button = request.form.get('next')
-        previous_button = request.form.get('previous')
+        #previous_button = request.form.get('previous')
 
-        if next_button is not None and (not form_responses or len(form_responses)-2 != len(features[count])):
-            return render_template('index.html', review=reviews[count], features=features[count],error_message='Please select an option for each extracted feature.', count = count)
+        if next_button is not None and (not form_responses or len(form_responses)-2 != len(session['reviews'][current_user.current]['features'])):
+            return render_template('index.html', app=session['reviews'][current_user.current]['app_name'], package=session['reviews'][current_user.current]['package_name'], review=session['reviews'][current_user.current]['review'], features=session['reviews'][current_user.current]['features'], error_message='Please select an option for each extracted feature.', count = current_user.current, total = current_user.end - current_user.start)
 
-        handle_form_submission(form_responses, next_button, previous_button)
+        #handle_form_submission(form_responses, next_button, previous_button)
+        handle_form_submission(form_responses, next_button)
 
-    if count < len(reviews):
-        return render_template('index.html', review=reviews[count], features=features[count], count = count)
+    if current_user.current < len(session['reviews']):
+        return render_template('index.html', app=session['reviews'][current_user.current]['app_name'], package=session['reviews'][current_user.current]['package_name'], review=session['reviews'][current_user.current]['review'], features=session['reviews'][current_user.current]['features'], count = current_user.current, total = current_user.end - current_user.start)
     else:
         return render_template('end.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    global count, clicked_buttons
+    global clicked_buttons, reviews
+
+    error_message = ""
+
     if request.method == 'POST':
+
+        # At log in we load the reviews, not before
+        with open(reviews_file_path, 'r', newline='\n', encoding='utf-8') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
+
+            reviews = []
+
+            for row in csv_reader:
+                reviews.append({'app_name': row[0], 'package_name': row[1], 'review': row[2], 'features': row[3].split(', ')})
+
+        clicked_buttons = [None]*len(reviews[0]['features'])
+
+
+        # Then we process the user
+
         user_id = request.form.get('user_id')
         password = request.form.get('password')
         user = User.get(user_id)
         if user and user.verify_password(password):
+            session['reviews'] = reviews[user.start:user.end]
+            clicked_buttons = [None]*len(session['reviews'][0]['features'])
             login_user(user)
-            count = 0
-            clicked_buttons = [None]*len(features[0])
             return redirect(url_for('index'))
 
         # Invalid credentials, show error message
         error_message = 'Invalid username or password'
 
-    else:   
-        error_message = 'Unexpected error'
+    #else:   
+    #    error_message = 'Unexpected error'
 
     return render_template('login.html', error_message=error_message)
 
@@ -104,33 +124,44 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-def handle_form_submission(form_responses, next_button, previous_button):
-    global count
+#def handle_form_submission(form_responses, next_button, previous_button):
+def handle_form_submission(form_responses, next_button):
+
+    # Confirmed features
+    session['reviews'][current_user.current]['evaluated_features'] = []
+    for key in form_responses:
+        if 'feature-' in key:
+            index = int(key.split('-')[1])-1
+            if form_responses[key] == 'confirm':
+                session['reviews'][current_user.current]['evaluated_features'].append(session['reviews'][current_user.current]['features'][index])
 
     # New features
     new_features = form_responses['new-features'].split(os.linesep)
+    if len(new_features) > 0 and new_features[0] != "":
+        session['reviews'][current_user.current]['evaluated_features'].extend(new_features)
 
-    # Extracted features marked as confirmed are true positives
-    #TODO 
+    # Save current answers
+    # Define the JSON file path
+    json_file_path = 'data/responses/responses-' + current_user.id + '.json'
 
-    # Extracted features marked as rejected are false positives
-    #TODO
+    # Check if the JSON file exists
+    if os.path.exists(json_file_path):
+        # If the file exists, load the existing JSON data
+        with open(json_file_path, 'r') as json_file:
+            data = json.load(json_file)
+    else:
+        # If the file doesn't exist, initialize an empty list
+        data = []
 
-    # New features not extracted are false negatives
-    fn = len(new_features)
+    # Append the new array to the existing data
+    data.append(session['reviews'][current_user.current])
 
-    print(form_responses)
-    session[str(count)] = {'extracted_features': {}, 'new_features': form_responses['new-features']}
-    #TODO extracted features mapping
-    for key in form_responses:
-        if 'feature-' in key:
-            session[str(count)]['extracted_features'][key] = form_responses[key]
-    print(session[str(count)])
+    # Save the updated data back to the JSON file
+    with open(json_file_path, 'w') as json_file:
+        json.dump(data, json_file, indent=4)
 
     if next_button is not None:
-        count += 1
-    elif previous_button is not None:
-        count -= 1
+        current_user.inc_current()
 
 if __name__ == '__main__':
     app.run(debug=True)
